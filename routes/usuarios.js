@@ -14,4 +14,5 @@ router.post('/',usuariosPos)
 
 router.delete('/',usuariosDelete)
 
+//EXPORTO EL MODULO SIEMPRE
 module.exports=router;
