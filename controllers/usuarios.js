@@ -1,44 +1,84 @@
 //TENEMOS LOS CONTROLADORES QUE SON LOS QUE DAN RESPUSTA A LAS PETICIONES 
 
-const { response } = require('express');
+const { request,response } = require('express');
 
-    const usuariosGet = (req, res = response) => {
+const bcryptjs = require('bcryptjs')
+
+const Usuario  = require('../models/usuario');
+
+
+    const usuariosGet = async(req = request, res = response) => {
         //Parametros de segmentos y req.query donde esta el request
-        const {saludo,nombre ='Pedro',apikey} = req.query;
+       // const {saludo,nombre ='',apikey} = req.query;
+        const {limite = 5, desde = 0} = req.query;
+        // const usuarios = await Usuario.find({estado : true})
+        //                 .skip( Number(desde) )
+        //                 .limit(Number(limite));
+
+        //const totalregistro = await Usuario.countDocuments({estado : true});                        
+
+        //Usamos la promesa para que se ejcuten ambas acciones al mismo tiempo , esto es un arrreglo de promesas
+        const [totalregistro,usuarios] = await Promise.all([
+            Usuario.countDocuments({estado : true}),
+            Usuario.find({estado : true})
+                         .skip( Number(desde) )
+                         .limit(Number(limite))
+        ]);
 
         res.json({
             msg:'get api-Controlador',
-            saludo,
-            nombre,
-            apikey
+            totalregistro,
+            usuarios
         })
 
     };
 
-    const usuariosPut = (req, res = response)=> {
+    const usuariosPut = async(req, res = response)=> {
         const id = req.params.id;
+        const{_id,password , google , correo ,...resto} = req.body;
+        
+        //Validar contra BD
+        if(password){
+            const salt = bcryptjs.genSaltSync(10);
+            resto.password = bcryptjs.hashSync( password,salt );
+        }
+        
+        const usuarioactualizado = await Usuario.findByIdAndUpdate(id,resto);
+
         res.json({
             msg:'put api-Controller',
-            id : id
+            usuarioactualizado
         })
     
     }
 
-    const usuariosPos = (req, res = response)=> {
+    const usuariosPos = async (req, res = response)=> {
         
-        const {nombre,edad} = req.body;
+
+        const { nombre,correo,password,rol } = req.body;
+        const usuario = new Usuario({nombre,correo,password,rol});
+
+        //Encriptar la contraseña
+        const salt = bcryptjs.genSaltSync(10);
+        usuario.password = bcryptjs.hashSync( password,salt );
+
+        //Guardar en BD
+        await usuario.save();
+
         res.json({
-            msg:'pos api-Controller'
-            ,nombre
-            ,edad
+            msg:'pos api-Controller',
+            usuario
         })
     
     }
     
-    const usuariosDelete = (req, res = response)=> {
+    const usuariosDelete = async(req, res = response)=> {
+       const { id } = req.params;
        
-        res.json({
-            msg:'put api-Delete'
+       const usuario = await Usuario.findByIdAndUpdate( id , {estado:false});
+       res.json({
+            msg:'put api-Delete',
+            usuario
         })
     
     }
